@@ -1,74 +1,277 @@
-const raidData = window.raidData || {};
-const select = document.getElementById("raid-select");
-const previewList = document.getElementById("gimmick-list");
+const raidDataStore = window.raidData || {};
 const startButton = document.getElementById("start-overlay");
+const statusText = document.getElementById("status-text");
 
-let activePiPWindow = null;
-let activeRaidId = null;
-let activeGimmickIndex = 0;
+let currentRaid = raidDataStore.micaela || null;
+let pipWindow = null;
+let overlayState = {
+  view: "start",
+  phaseIndex: null,
+  monsterIndex: null
+};
 
-function populateRaidList() {
-  const entries = Object.entries(raidData);
-  if (!entries.length) {
-    select.innerHTML = '<option value="">등록된 레이드가 없습니다</option>';
-    previewList.innerHTML = '<li>레이드 데이터를 먼저 추가해 주세요.</li>';
-    return;
+function updateStatus(message) {
+  if (statusText) {
+    statusText.textContent = message;
   }
-
-  select.innerHTML = entries
-    .map(([id, raid]) => `<option value="${id}">${raid.name}</option>`)
-    .join("");
-
-  select.value = entries[0][0];
-  renderPreview(entries[0][0]);
 }
 
-function renderPreview(raidId) {
-  const raid = raidData[raidId];
-  if (!raid) {
-    previewList.innerHTML = "";
-    return;
+function getPhase() {
+  if (!currentRaid || overlayState.phaseIndex === null || overlayState.phaseIndex < 0) {
+    return null;
   }
-
-  previewList.innerHTML = raid.gimmicks
-    .map((gimmick, index) => {
-      const isActive = index === 0;
-      return `<li class="${isActive ? "active" : ""}">${gimmick}</li>`;
-    })
-    .join("");
+  return currentRaid.phases[overlayState.phaseIndex] || null;
 }
 
-function updatePreviewHighlight(raidId, index) {
-  const raid = raidData[raidId];
-  if (!raid || !previewList.children.length) {
+function getMonster() {
+  const phase = getPhase();
+  if (!phase || overlayState.monsterIndex === null || overlayState.monsterIndex < 0) {
+    return null;
+  }
+  return phase.monsters[overlayState.monsterIndex] || null;
+}
+
+function updateOverlayStatus() {
+  if (!currentRaid) {
+    updateStatus("레이드 데이터를 찾을 수 없습니다.");
     return;
   }
 
-  Array.from(previewList.children).forEach((item, itemIndex) => {
-    item.classList.toggle("active", itemIndex === index);
+  if (overlayState.view === "start") {
+    updateStatus("오버레이를 열면 단계 → 몬스터 → 기믹 순으로 빠르게 확인할 수 있습니다.");
+    return;
+  }
+
+  const phase = getPhase();
+  const monster = getMonster();
+
+  if (overlayState.view === "phase" && phase) {
+    updateStatus(`${phase.name}를 선택했습니다. 몬스터를 선택해 주세요.`);
+    return;
+  }
+
+  if (overlayState.view === "monster" && phase && monster) {
+    updateStatus(`${phase.name}의 ${monster.name}를 선택했습니다.`);
+    return;
+  }
+
+  if (overlayState.view === "gimmick" && monster) {
+    updateStatus(`${monster.name}의 기믹을 확인 중입니다.`);
+  }
+}
+
+function renderOverlayContent() {
+  if (!pipWindow) {
+    return;
+  }
+
+  const body = pipWindow.document.body;
+  body.innerHTML = "";
+
+  const style = pipWindow.document.createElement("style");
+  style.textContent = `
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+      background: #0b0e14;
+      color: #f4f7fb;
+    }
+  `;
+  pipWindow.document.head.appendChild(style);
+
+  const shell = pipWindow.document.createElement("div");
+  shell.className = "overlay-shell";
+
+  const card = pipWindow.document.createElement("div");
+  card.className = "overlay-card";
+
+  const label = pipWindow.document.createElement("div");
+  label.className = "overlay-label";
+  label.textContent = currentRaid.name;
+  card.appendChild(label);
+
+  if (overlayState.view === "start") {
+    const title = pipWindow.document.createElement("div");
+    title.className = "overlay-title";
+    title.textContent = "미카엘라 공략 시작";
+    card.appendChild(title);
+
+    const description = pipWindow.document.createElement("div");
+    description.className = "overlay-description";
+    description.textContent = "클릭하면 1페이즈, 2페이즈, 3페이즈를 순서대로 확인할 수 있습니다.";
+    card.appendChild(description);
+
+    const button = pipWindow.document.createElement("button");
+    button.className = "overlay-btn active";
+    button.type = "button";
+    button.textContent = "단계 선택하기";
+    button.dataset.action = "start";
+    card.appendChild(button);
+  } else if (overlayState.view === "phase") {
+    const title = pipWindow.document.createElement("div");
+    title.className = "overlay-title";
+    title.textContent = "단계를 선택하세요";
+    card.appendChild(title);
+
+    const grid = pipWindow.document.createElement("div");
+    grid.className = "overlay-grid";
+
+    currentRaid.phases.forEach((phase, index) => {
+      const phaseButton = pipWindow.document.createElement("button");
+      phaseButton.className = "overlay-btn";
+      phaseButton.type = "button";
+      phaseButton.textContent = phase.name;
+      phaseButton.dataset.action = "select-phase";
+      phaseButton.dataset.phaseIndex = String(index);
+      if (overlayState.phaseIndex === index) {
+        phaseButton.classList.add("active");
+      }
+      grid.appendChild(phaseButton);
+    });
+
+    card.appendChild(grid);
+  } else if (overlayState.view === "monster") {
+    const phase = getPhase();
+    const title = pipWindow.document.createElement("div");
+    title.className = "overlay-title";
+    title.textContent = phase ? phase.name : "단계";
+    card.appendChild(title);
+
+    const subtitle = pipWindow.document.createElement("div");
+    subtitle.className = "overlay-subtitle";
+    subtitle.textContent = "몬스터를 선택하면 기믹이 표시됩니다.";
+    card.appendChild(subtitle);
+
+    const grid = pipWindow.document.createElement("div");
+    grid.className = "overlay-grid";
+
+    if (phase) {
+      phase.monsters.forEach((monster, index) => {
+        const monsterButton = pipWindow.document.createElement("button");
+        monsterButton.className = "overlay-btn";
+        monsterButton.type = "button";
+        monsterButton.textContent = monster.name;
+        monsterButton.dataset.action = "select-monster";
+        monsterButton.dataset.monsterIndex = String(index);
+        if (overlayState.monsterIndex === index) {
+          monsterButton.classList.add("active");
+        }
+        grid.appendChild(monsterButton);
+      });
+    }
+
+    card.appendChild(grid);
+
+    const footer = pipWindow.document.createElement("div");
+    footer.className = "overlay-footer";
+    const backButton = pipWindow.document.createElement("button");
+    backButton.className = "overlay-btn";
+    backButton.type = "button";
+    backButton.textContent = "뒤로";
+    backButton.dataset.action = "back-phase";
+    footer.appendChild(backButton);
+    card.appendChild(footer);
+  } else if (overlayState.view === "gimmick") {
+    const phase = getPhase();
+    const monster = getMonster();
+    const title = pipWindow.document.createElement("div");
+    title.className = "overlay-title";
+    title.textContent = monster ? monster.name : "기믹";
+    card.appendChild(title);
+
+    const subtitle = pipWindow.document.createElement("div");
+    subtitle.className = "overlay-subtitle";
+    subtitle.textContent = phase ? `${phase.name} 공략` : "공략";
+    card.appendChild(subtitle);
+
+    const list = pipWindow.document.createElement("ul");
+    list.className = "gimmick-list";
+
+    if (monster) {
+      monster.gimmicks.forEach((gimmick) => {
+        const item = pipWindow.document.createElement("li");
+        item.textContent = gimmick;
+        list.appendChild(item);
+      });
+    }
+
+    card.appendChild(list);
+
+    const footer = pipWindow.document.createElement("div");
+    footer.className = "overlay-footer";
+    const backButton = pipWindow.document.createElement("button");
+    backButton.className = "overlay-btn";
+    backButton.type = "button";
+    backButton.textContent = "몬스터 선택으로";
+    backButton.dataset.action = "back-monster";
+    footer.appendChild(backButton);
+
+    const homeButton = pipWindow.document.createElement("button");
+    homeButton.className = "overlay-btn";
+    homeButton.type = "button";
+    homeButton.textContent = "처음으로";
+    homeButton.dataset.action = "home";
+    footer.appendChild(homeButton);
+
+    card.appendChild(footer);
+  }
+
+  shell.appendChild(card);
+  body.appendChild(shell);
+
+  body.addEventListener("click", (event) => {
+    const target = event.target.closest("button[data-action]");
+
+    if (!target) {
+      if (overlayState.view === "start") {
+        overlayState.view = "phase";
+        overlayState.phaseIndex = null;
+        overlayState.monsterIndex = null;
+      } else if (overlayState.view === "monster") {
+        overlayState.view = "phase";
+        overlayState.monsterIndex = null;
+      } else if (overlayState.view === "gimmick") {
+        overlayState.view = "monster";
+      }
+      renderOverlayContent();
+      updateOverlayStatus();
+      return;
+    }
+
+    const action = target.dataset.action;
+
+    if (action === "start") {
+      overlayState.view = "phase";
+      overlayState.phaseIndex = null;
+      overlayState.monsterIndex = null;
+    } else if (action === "select-phase") {
+      overlayState.phaseIndex = Number(target.dataset.phaseIndex);
+      overlayState.view = "monster";
+      overlayState.monsterIndex = null;
+    } else if (action === "select-monster") {
+      overlayState.monsterIndex = Number(target.dataset.monsterIndex);
+      overlayState.view = "gimmick";
+    } else if (action === "back-phase") {
+      overlayState.view = "phase";
+      overlayState.monsterIndex = null;
+    } else if (action === "back-monster") {
+      overlayState.view = "monster";
+    } else if (action === "home") {
+      overlayState.view = "start";
+      overlayState.phaseIndex = null;
+      overlayState.monsterIndex = null;
+    }
+
+    renderOverlayContent();
+    updateOverlayStatus();
   });
 }
 
-function renderOverlayContent(documentRef, raid, index) {
-  const titleNode = documentRef.getElementById("overlay-title");
-  const counterNode = documentRef.getElementById("overlay-index");
-  const textNode = documentRef.getElementById("overlay-text");
-
-  if (!titleNode || !counterNode || !textNode) {
-    return;
-  }
-
-  titleNode.textContent = raid.name;
-  counterNode.textContent = `${index + 1}/${raid.gimmicks.length}`;
-  textNode.textContent = raid.gimmicks[index];
-}
-
 async function openOverlay() {
-  const raidId = select.value;
-  const raid = raidData[raidId];
-
-  if (!raid) {
-    alert("먼저 레이드를 선택해 주세요.");
+  if (!currentRaid) {
+    alert("미카엘라 레이드 데이터를 찾을 수 없습니다.");
     return;
   }
 
@@ -78,101 +281,26 @@ async function openOverlay() {
   }
 
   try {
-    if (activePiPWindow && !activePiPWindow.closed) {
-      activePiPWindow.close();
+    if (pipWindow && !pipWindow.closed) {
+      pipWindow.close();
     }
 
-    const pipWindow = await window.documentPictureInPicture.requestWindow({
+    pipWindow = await window.documentPictureInPicture.requestWindow({
       width: 400,
-      height: 260
+      height: 320
     });
 
-    activePiPWindow = pipWindow;
-    activeRaidId = raidId;
-    activeGimmickIndex = 0;
+    overlayState = {
+      view: "start",
+      phaseIndex: null,
+      monsterIndex: null
+    };
 
-    const style = pipWindow.document.createElement("style");
-    style.textContent = `
-      :root { color-scheme: dark; }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        font-family: "Segoe UI", "Malgun Gothic", sans-serif;
-        background: rgba(8, 10, 15, 0.96);
-        color: #f5f7fa;
-      }
-      .overlay-shell {
-        height: 100vh;
-        width: 100vw;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        cursor: pointer;
-        user-select: none;
-      }
-      .overlay-card {
-        width: 100%;
-        max-width: 100%;
-        background: rgba(20, 24, 32, 0.96);
-        border: 1px solid rgba(255, 209, 102, 0.35);
-        border-radius: 18px;
-        padding: 24px;
-        text-align: center;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-      }
-      .overlay-label {
-        font-size: 0.8rem;
-        color: #ffd166;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        margin-bottom: 10px;
-      }
-      .overlay-title {
-        font-size: 1.2rem;
-        font-weight: 700;
-        margin-bottom: 8px;
-      }
-      .overlay-index {
-        font-size: 0.95rem;
-        color: #9aa0ac;
-        margin-bottom: 14px;
-      }
-      .overlay-text {
-        font-size: 1.25rem;
-        font-weight: 600;
-        line-height: 1.45;
-      }
-      .overlay-hint {
-        margin-top: 14px;
-        font-size: 0.88rem;
-        color: #9aa0ac;
-      }
-    `;
-
-    pipWindow.document.head.appendChild(style);
-    pipWindow.document.body.innerHTML = `
-      <div class="overlay-shell">
-        <div class="overlay-card">
-          <div class="overlay-label">던파 레이드 오버레이</div>
-          <div class="overlay-title" id="overlay-title"></div>
-          <div class="overlay-index" id="overlay-index"></div>
-          <div class="overlay-text" id="overlay-text"></div>
-          <div class="overlay-hint">클릭하면 다음 기믹으로 넘어갑니다.</div>
-        </div>
-      </div>
-    `;
-
-    renderOverlayContent(pipWindow.document, raid, activeGimmickIndex);
-
-    pipWindow.document.body.addEventListener("click", () => {
-      activeGimmickIndex = (activeGimmickIndex + 1) % raid.gimmicks.length;
-      renderOverlayContent(pipWindow.document, raid, activeGimmickIndex);
-      updatePreviewHighlight(raidId, activeGimmickIndex);
-    });
+    renderOverlayContent();
+    updateOverlayStatus();
 
     pipWindow.addEventListener("pagehide", () => {
-      activePiPWindow = null;
+      pipWindow = null;
     });
   } catch (error) {
     console.error(error);
@@ -180,10 +308,5 @@ async function openOverlay() {
   }
 }
 
-select.addEventListener("change", () => {
-  renderPreview(select.value);
-});
-
 startButton.addEventListener("click", openOverlay);
-
-populateRaidList();
+updateOverlayStatus();
