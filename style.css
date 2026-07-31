@@ -81,16 +81,16 @@ h1 {
   min-height: 100vh;
   min-width: 100vw;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
   background: radial-gradient(circle at top, rgba(255, 209, 102, 0.18), transparent 45%), #0b0e14;
 }
 
 .overlay-card {
-  width: min(100%, 360px);
-  padding: 20px;
-  border-radius: 18px;
+  width: min(100%, 520px);
+  padding: 18px;
+  border-radius: 18px 18px 10px 10px;
   background: rgba(20, 24, 32, 0.96);
   border: 1px solid rgba(255, 209, 102, 0.35);
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
@@ -120,18 +120,21 @@ h1 {
 .overlay-grid {
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .overlay-btn {
   width: 100%;
+  min-height: 48px;
   padding: 12px 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #202633;
   color: #f4f7fb;
   font-size: 1rem;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
+  font-weight: 600;
 }
 
 .overlay-btn:hover {
@@ -154,6 +157,11 @@ h1 {
   display: flex;
   gap: 8px;
   margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.overlay-footer .overlay-btn {
+  flex: 1 1 140px;
 }
 
 .gimmick-list {

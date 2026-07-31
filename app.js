@@ -286,8 +286,8 @@ async function openOverlay() {
     }
 
     pipWindow = await window.documentPictureInPicture.requestWindow({
-      width: 400,
-      height: 320
+      width: 520,
+      height: 360
     });
 
     overlayState = {
