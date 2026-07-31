@@ -1,0 +1,110 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+  background: #14161c;
+  color: #f2f2f2;
+}
+
+.panel {
+  max-width: 480px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #1c1f27;
+  border-radius: 12px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin-top: 0;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #9aa0ac;
+}
+
+label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: #cfd3da;
+}
+
+select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #3a3f4b;
+  background: #14161c;
+  color: #f2f2f2;
+  font-size: 1rem;
+}
+
+.gimmick-preview {
+  margin-top: 16px;
+  padding-left: 20px;
+}
+
+.gimmick-preview li {
+  padding: 4px 0;
+  color: #9aa0ac;
+}
+
+.gimmick-preview li.active {
+  color: #ffd166;
+  font-weight: 600;
+}
+
+.primary-btn {
+  margin-top: 20px;
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: #ffd166;
+  color: #1c1f27;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  background: #ffdb85;
+}
+
+/* 오버레이(PiP 창) 내부 스타일 */
+#overlay-content {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(10, 10, 14, 0.92);
+  cursor: pointer;
+  user-select: none;
+  padding: 16px;
+  text-align: center;
+}
+
+#overlay-content .gimmick-counter {
+  font-size: 0.9rem;
+  color: #ffd166;
+  letter-spacing: 0.05em;
+}
+
+#overlay-content .gimmick-text {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
