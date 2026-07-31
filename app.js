@@ -75,54 +75,58 @@ function renderOverlayContent() {
     return;
   }
 
-  const body = pipWindow.document.body;
-  body.innerHTML = "";
+  // Prefer Document Picture-in-Picture when available; otherwise fall back to a popup window
+  try {
+    if (pipWindow && !pipWindow.closed) {
+      try { pipWindow.close(); } catch (e) { /* ignore */ }
+      pipWindow = null;
+    }
 
-  const style = pipWindow.document.createElement("style");
-  style.textContent = `
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      min-height: 100%;
-      min-width: 100%;
+    if (window.documentPictureInPicture && window.documentPictureInPicture.requestWindow) {
+      pipWindow = await window.documentPictureInPicture.requestWindow({
+        width: 520,
+        height: 360
+      });
+
+      // PiP-specific unload
+      pipWindow.addEventListener("pagehide", () => {
+        pipWindow = null;
+      });
+    } else {
+      // Fallback: open a normal popup so UI can be interacted with during development/testing
+      pipWindow = window.open("", "mikaela-overlay", "width=760,height=360,resizable=yes");
+      if (!pipWindow) {
+        alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.");
+        return;
+      }
+
+      // Seed a minimal document so our renderer can attach elements
+      try {
+        pipWindow.document.open();
+        pipWindow.document.write('<!doctype html><html><head><meta charset="utf-8"><title>미카엘라 오버레이</title></head><body></body></html>');
+        pipWindow.document.close();
+      } catch (e) {
+        // ignore write failures
+      }
+
+      // Ensure we clear pipWindow reference when closed
+      const cleanup = () => { try { pipWindow = null; } catch (e) {} };
+      try { pipWindow.addEventListener && pipWindow.addEventListener("beforeunload", cleanup); } catch (e) {}
+      try { pipWindow.onunload = cleanup; } catch (e) {}
     }
-    body {
-      font-family: "Segoe UI", "Malgun Gothic", sans-serif;
-      background: #0b0e14;
-      color: #f4f7fb;
-      overflow: hidden;
-    }
-    .overlay-shell {
-      min-height: 100vh;
-      min-width: 100vw;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 12px;
-      background: radial-gradient(circle at top, rgba(255, 209, 102, 0.18), transparent 45%), #0b0e14;
-    }
-    .overlay-card {
-      width: min(100%, 100vw);
-      max-width: 780px;
-      padding: clamp(16px, 2.5vw, 24px);
-      border-radius: 18px 18px 10px 10px;
-      background: rgba(20, 24, 32, 0.96);
-      border: 1px solid rgba(255, 209, 102, 0.35);
-      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
-    }
-    .overlay-label {
-      font-size: clamp(0.75rem, 1.2vw, 0.9rem);
-      color: #ffd166;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .overlay-title {
-      font-size: clamp(1.05rem, 2.2vw, 1.4rem);
-      font-weight: 700;
-      margin-bottom: 10px;
-      color: #f4f7fb;
+
+    overlayState = {
+      view: "start",
+      phaseIndex: null,
+      monsterIndex: null
+    };
+
+    renderOverlayContent();
+    updateOverlayStatus();
+  } catch (error) {
+    console.error(error);
+    alert("오버레이를 열 수 없습니다. 환경을 확인해 주세요.");
+  }
     }
     .overlay-description {
       font-size: clamp(0.85rem, 1.6vw, 1rem);
@@ -328,8 +332,10 @@ function renderOverlayContent() {
   shell.appendChild(card);
   body.appendChild(shell);
 
-  body.addEventListener("click", (event) => {
-    const target = event.target.closest("button[data-action]");
+  // Remove any existing onclick handler to prevent duplicate listeners
+  try { body.onclick = null; } catch (e) {}
+  const clickHandler = (event) => {
+    const target = event.target && event.target.closest ? event.target.closest("button[data-action]") : null;
 
     if (!target) {
       if (overlayState.view === "start") {
@@ -373,7 +379,8 @@ function renderOverlayContent() {
 
     renderOverlayContent();
     updateOverlayStatus();
-  });
+  };
+  try { body.addEventListener && body.addEventListener("click", clickHandler); } catch (e) { body.onclick = clickHandler; }
 }
 
 async function openOverlay() {
