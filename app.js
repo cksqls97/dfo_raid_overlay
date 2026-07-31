@@ -78,6 +78,95 @@ function renderOverlayContent() {
       background: #0b0e14;
       color: #f4f7fb;
     }
+    .overlay-shell {
+      min-height: 100vh;
+      min-width: 100vw;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+      background: radial-gradient(circle at top, rgba(255, 209, 102, 0.18), transparent 45%), #0b0e14;
+    }
+    .overlay-card {
+      width: min(100%, 520px);
+      padding: 18px;
+      border-radius: 18px 18px 10px 10px;
+      background: rgba(20, 24, 32, 0.96);
+      border: 1px solid rgba(255, 209, 102, 0.35);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
+    }
+    .overlay-label {
+      font-size: 0.8rem;
+      color: #ffd166;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .overlay-title {
+      font-size: 1.28rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #f4f7fb;
+    }
+    .overlay-description {
+      font-size: 0.95rem;
+      color: #bfc8d3;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .overlay-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .overlay-btn {
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 12px;
+      background: #202633;
+      color: #f4f7fb;
+      font-size: 1rem;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+    }
+    .overlay-btn:hover {
+      background: #2a3140;
+    }
+    .overlay-btn.active {
+      background: #ffd166;
+      color: #151821;
+    }
+    .overlay-subtitle {
+      font-size: 0.95rem;
+      color: #9aa4b2;
+      margin-bottom: 10px;
+    }
+    .overlay-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .overlay-footer .overlay-btn {
+      flex: 1 1 140px;
+    }
+    .gimmick-list {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+      display: grid;
+      gap: 8px;
+    }
+    .gimmick-list li {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      color: #f8fafc;
+      line-height: 1.45;
+    }
   `;
   pipWindow.document.head.appendChild(style);
 
