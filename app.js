@@ -118,7 +118,8 @@ function renderOverlayContent() {
 
     const description = pipWindow.document.createElement("div");
     description.className = "overlay-description";
-    description.textContent = "클릭하면 1페이즈, 2페이즈, 3페이즈를 순서대로 확인할 수 있습니다.";
+    description.textContent =
+      "클릭하면 1페이즈, 2페이즈, 3페이즈를 순서대로 확인할 수 있습니다.";
     card.appendChild(description);
 
     const button = pipWindow.document.createElement("button");
@@ -143,7 +144,8 @@ function renderOverlayContent() {
       phaseButton.textContent = phase.name;
       phaseButton.dataset.action = "select-phase";
       phaseButton.dataset.phaseIndex = String(index);
-      if (overlayState.phaseIndex === index) phaseButton.classList.add("active");
+      if (overlayState.phaseIndex === index)
+        phaseButton.classList.add("active");
       grid.appendChild(phaseButton);
     });
 
@@ -160,23 +162,52 @@ function renderOverlayContent() {
     subtitle.textContent = "몬스터를 선택하면 기믹이 표시됩니다.";
     card.appendChild(subtitle);
 
-    const grid = pipWindow.document.createElement("div");
-    grid.className = "overlay-grid";
-
     if (phase) {
-      phase.monsters.forEach((monster, index) => {
-        const monsterButton = pipWindow.document.createElement("button");
-        monsterButton.className = "overlay-btn";
-        monsterButton.type = "button";
-        monsterButton.textContent = monster.name;
-        monsterButton.dataset.action = "select-monster";
-        monsterButton.dataset.monsterIndex = String(index);
-        if (overlayState.monsterIndex === index) monsterButton.classList.add("active");
-        grid.appendChild(monsterButton);
-      });
-    }
+      const buildMonsterGrid = (entries) => {
+        const grid = pipWindow.document.createElement("div");
+        grid.className = "overlay-grid";
+        entries.forEach(({ monster, index }) => {
+          const monsterButton = pipWindow.document.createElement("button");
+          monsterButton.className = "overlay-btn";
+          monsterButton.type = "button";
+          monsterButton.textContent = monster.name;
+          monsterButton.dataset.action = "select-monster";
+          monsterButton.dataset.monsterIndex = String(index);
+          if (overlayState.monsterIndex === index)
+            monsterButton.classList.add("active");
+          grid.appendChild(monsterButton);
+        });
+        return grid;
+      };
 
-    card.appendChild(grid);
+      const indexedMonsters = phase.monsters.map((monster, index) => ({
+        monster,
+        index,
+      }));
+      const hasTypedMonsters = indexedMonsters.some(
+        ({ monster }) => monster.type,
+      );
+
+      if (hasTypedMonsters) {
+        [
+          { type: "named", label: "네임드" },
+          { type: "boss", label: "보스" },
+        ].forEach(({ type, label }) => {
+          const entries = indexedMonsters.filter(
+            ({ monster }) => monster.type === type,
+          );
+          if (entries.length === 0) return;
+
+          const groupLabel = pipWindow.document.createElement("div");
+          groupLabel.className = "overlay-subtitle";
+          groupLabel.textContent = label;
+          card.appendChild(groupLabel);
+          card.appendChild(buildMonsterGrid(entries));
+        });
+      } else {
+        card.appendChild(buildMonsterGrid(indexedMonsters));
+      }
+    }
 
     const footer = pipWindow.document.createElement("div");
     footer.className = "overlay-footer";
@@ -237,23 +268,43 @@ function renderOverlayContent() {
 }
 
 function handleOverlayClick(event) {
-  const target = event.target && event.target.closest ? event.target.closest("button[data-action]") : null;
+  const target =
+    event.target && event.target.closest
+      ? event.target.closest("button[data-action]")
+      : null;
   if (!target) {
     if (overlayState.view === "start") overlayState.view = "phase";
-    else if (overlayState.view === "monster") { overlayState.view = "phase"; overlayState.monsterIndex = null; }
-    else if (overlayState.view === "gimmick") overlayState.view = "monster";
+    else if (overlayState.view === "monster") {
+      overlayState.view = "phase";
+      overlayState.monsterIndex = null;
+    } else if (overlayState.view === "gimmick") overlayState.view = "monster";
     renderOverlayContent();
     updateOverlayStatus();
     return;
   }
 
   const action = target.dataset.action;
-  if (action === "start") { overlayState.view = "phase"; overlayState.phaseIndex = null; overlayState.monsterIndex = null; }
-  else if (action === "select-phase") { overlayState.phaseIndex = Number(target.dataset.phaseIndex); overlayState.view = "monster"; overlayState.monsterIndex = null; }
-  else if (action === "select-monster") { overlayState.monsterIndex = Number(target.dataset.monsterIndex); overlayState.view = "gimmick"; }
-  else if (action === "back-phase") { overlayState.view = "phase"; overlayState.monsterIndex = null; }
-  else if (action === "back-monster") { overlayState.view = "monster"; }
-  else if (action === "home") { overlayState.view = "start"; overlayState.phaseIndex = null; overlayState.monsterIndex = null; }
+  if (action === "start") {
+    overlayState.view = "phase";
+    overlayState.phaseIndex = null;
+    overlayState.monsterIndex = null;
+  } else if (action === "select-phase") {
+    overlayState.phaseIndex = Number(target.dataset.phaseIndex);
+    overlayState.view = "monster";
+    overlayState.monsterIndex = null;
+  } else if (action === "select-monster") {
+    overlayState.monsterIndex = Number(target.dataset.monsterIndex);
+    overlayState.view = "gimmick";
+  } else if (action === "back-phase") {
+    overlayState.view = "phase";
+    overlayState.monsterIndex = null;
+  } else if (action === "back-monster") {
+    overlayState.view = "monster";
+  } else if (action === "home") {
+    overlayState.view = "start";
+    overlayState.phaseIndex = null;
+    overlayState.monsterIndex = null;
+  }
 
   renderOverlayContent();
   updateOverlayStatus();
@@ -278,7 +329,10 @@ async function openOverlay() {
     }
     pipWindow = null;
 
-    if (window.documentPictureInPicture && window.documentPictureInPicture.requestWindow) {
+    if (
+      window.documentPictureInPicture &&
+      window.documentPictureInPicture.requestWindow
+    ) {
       pipWindow = await window.documentPictureInPicture.requestWindow({
         width: 520,
         height: 360,
@@ -289,7 +343,11 @@ async function openOverlay() {
       });
     } else {
       // Fallback for browsers without Document Picture-in-Picture support
-      pipWindow = window.open("", "mikaela-overlay", "width=760,height=420,resizable=yes");
+      pipWindow = window.open(
+        "",
+        "mikaela-overlay",
+        "width=760,height=420,resizable=yes",
+      );
 
       if (!pipWindow) {
         alert("팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.");
